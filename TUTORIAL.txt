@@ -1,0 +1,40 @@
+使用PostgreSQL和nagios设计统一的应用监控接口
+
+1. 架构设计
+为什么要多IDC部署?
+  为避免广域网络异常时无法接收到应用发来的消息, 在每个IDC部署一个PostgreSQL数据库用于接收应用程序发送过来的告警/恢复/心跳消息.
+
+为什么要使用关系数据库?
+  可以存储应用的详细信息, 依赖关系, 部署的地点 , 项目所属部门, 开发, 项目经理, 运维人员等信息, 保留历史告警数据等等.
+  由运维分配被监控的应用的应用ID和模块ID. 并且使用PostgreSQL可以对应用做鉴权, 后面的例子会提到.
+  PostgreSQL有先进的函数语言方便运维控制内部逻辑, 适合提供API, 简化程序端的逻辑.
+  PostgreSQL的函数还可以方便的用来输出监控结果, 输出异常模块会关联到的其他模块. 提高运维深度判断故障的效率.
+
+应用端 : 
+调用PostgreSQL函数, 将统一好格式的信息作为函数的参数传递给数据库
+
+Nagios Plugin : 
+调用PostgreSQL函数, 用于检查从应用写入到PG库的信息, 并将信息返回给NagiosServer
+
+2. 应用端API描述
+心跳API
+  由应用程序间隔一段时间向PostgreSQL数据库执行一条函数调用.
+  keepalive(i_modid integer, i_submodid integer)
+信息发布API
+  应用程序调用PostgreSQL数据库函数,告知当前应用程序的运行状况(健康,警告,异常).
+  app_api(i_modid integer, i_submodid integer, i_code integer, i_appcode text, i_info text)
+
+3. Nagios端API描述
+获取心跳API
+  由NagiosServer发起,nagios plugin完成的心跳检测, 运维可以主动关闭任意模块的心跳检测, 如临时维护时.
+  nagios_keepalive(i_interval interval)
+检测告警信息API
+  检测当前异常的模块信息, 同时输出依赖这些模块的其他模块, 以提升关联异常的发现效率.
+  nagios_get_mq()
+
+
+
+
+# Author : Digoal zhou
+# Email : digoal@126.com
+# Blog : http://blog.163.com/digoal@126/
